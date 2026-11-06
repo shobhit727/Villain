@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 #
 # Author: Panagiotis Chartas (t3l3machus) 
 #
@@ -6,6 +5,7 @@
 # https://github.com/t3l3machus/Villain
 
 import os
+
 from .common import system_type
 from .settings import Logging_Settings
 
@@ -26,14 +26,12 @@ class HoaxShell_Implants_Logger:
             while HoaxShell_Implants_Logger.generated_implants_file_open:
                 pass
 
-            else:
-                HoaxShell_Implants_Logger.generated_implants_file_open = True
-                hoaxshell_generated_implants = open(HoaxShell_Implants_Logger.generated_implants_file, 'a')
-                hoaxshell_generated_implants.write(f'"{id}" : {str(session_meta)}' + ',\n')
-                hoaxshell_generated_implants.close()
-                HoaxShell_Implants_Logger.generated_implants_file_open = False
+            HoaxShell_Implants_Logger.generated_implants_file_open = True
+            with open(HoaxShell_Implants_Logger.generated_implants_file, 'a') as hoaxshell_generated_implants:
+                hoaxshell_generated_implants.write(f'"{id}" : {session_meta!s}' + ',\n')
+            HoaxShell_Implants_Logger.generated_implants_file_open = False
 
-        except:
+        except BaseException:  # noqa: BLE001, S110
             pass
 
 
@@ -48,17 +46,14 @@ class HoaxShell_Implants_Logger:
                 while HoaxShell_Implants_Logger.generated_implants_file_open:
                     pass
 
-                else:
-                    HoaxShell_Implants_Logger.generated_implants_file_open = True
-                    hoaxshell_generated_implants = open(HoaxShell_Implants_Logger.generated_implants_file, 'r')
+                HoaxShell_Implants_Logger.generated_implants_file_open = True
+                with open(HoaxShell_Implants_Logger.generated_implants_file, 'r') as hoaxshell_generated_implants:
                     session_data = hoaxshell_generated_implants.read()
-                    hoaxshell_generated_implants.close()
-                    HoaxShell_Implants_Logger.generated_implants_file_open = False
-                    return '{' + session_data.strip(',\n') + '}'
+                HoaxShell_Implants_Logger.generated_implants_file_open = False
+                return '{' + session_data.strip(',\n') + '}'
 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 print(e)
-                pass
         
         return False
             
@@ -69,7 +64,7 @@ def clear_metadata():
     try:
         if os.path.exists(HoaxShell_Implants_Logger.generated_implants_file):
             os.remove(HoaxShell_Implants_Logger.generated_implants_file)
-    except:
+    except BaseException:  # noqa: BLE001
         return False
     
     return True

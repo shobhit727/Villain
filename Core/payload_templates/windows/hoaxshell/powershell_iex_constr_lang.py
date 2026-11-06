@@ -1,30 +1,33 @@
 # This module is part of the "Villain C2 Framework"
 
+from typing import ClassVar
+
+
 class Payload:
 
-    info = {
+    info: ClassVar[dict] = {
         'Title' : 'Windows PowerShell IEX HoaxShell - Constraint Language Mode',
         'Author' : 'Panagiotis Chartas (t3l3machus)',
         'Description' : 'An Http based beacon-like reverse shell that utilizes IEX and will work even if Constraint Language Mode is enabled on the victim',
         'References' : ['https://github.com/t3l3machus/hoaxshell', 'https://revshells.com']
     }
 
-    meta = {
+    meta: ClassVar[dict] = {
         'handler' : 'hoaxshell',
         'type' : 'ps-iex-cm',
         'os' : 'windows',
         'shell' : 'powershell.exe'
     }
 
-    config = {
+    config: ClassVar[dict] = {
         'frequency' : 0.8
     }
 
-    parameters = {
+    parameters: ClassVar[dict] = {
         'lhost' : None
     }
 
-    attrs = {
+    attrs: ClassVar[dict] = {
         'obfuscate' : True,
         'encode' : True
     }

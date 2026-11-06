@@ -1,27 +1,30 @@
 # This module is part of the "Villain C2 Framework"
 
+from typing import ClassVar
+
+
 class Payload:
 
-    info = {
+    info: ClassVar[dict] = {
         'Title' : 'Windows PowerShell Reverse TCP',
         'Author' : 'Unknown',
         'Description' : 'Classic PowerShell Reverse TCP',
         'References' : ['https://revshells.com']
     }
 
-    meta = {
+    meta: ClassVar[dict] = {
         'handler' : 'netcat',
         'type' : 'powershell-reverse-tcp',
         'os' : 'windows'
     }
 
-    config = {}
+    config: ClassVar[dict] = {}
 
-    parameters = {
+    parameters: ClassVar[dict] = {
         'lhost' : None
     }
 
-    attrs = {
+    attrs: ClassVar[dict] = {
         'encode' : True
     }
 

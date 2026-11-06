@@ -60,6 +60,16 @@ You must also install `gnome-terminal` (required for one of the framework's comm
 sudo apt update&&sudo apt install gnome-terminal
 ```
 
+## Static Analysis
+
+Install the development tools in an isolated environment, then run Ruff and Bandit against the Python source. These checks do not start Villain or execute payload templates.
+
+```bash
+python -m pip install -r requirements-dev.txt
+python -m ruff check .
+python -m bandit -r Villain.py Core
+```
+
 ## Usage
 You should run as root:
 ```

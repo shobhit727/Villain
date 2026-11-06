@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 #
 # Author: Panagiotis Chartas (t3l3machus) 
 #
@@ -8,8 +7,9 @@
 
 import os
 from threading import BoundedSemaphore
-from uuid import uuid4
 from time import sleep
+from uuid import uuid4
+
 
 class Threading_params:
 	
@@ -123,11 +123,9 @@ class Loading:
 			for item in animate:
 				print(f'\r{msg} {item}', end = '')
 				sleep(0.08)
-		else:
-			print(f'\r{msg}    ', end = '')
-			Loading.finished = True
-			Threading_params.thread_limiter.release()
-			return
+		print(f'\r{msg}    ', end = '')
+		Loading.finished = True
+		Threading_params.thread_limiter.release()
 
 
 	

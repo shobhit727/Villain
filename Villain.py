@@ -7,13 +7,21 @@
 
 
 import argparse
-from subprocess import check_output
-from Core.common import *
-from Core.settings import Villain, Hoaxshell_Settings, Core_Server_Settings, TCP_Sock_Handler_Settings, File_Smuggler_Settings, Loading
-from Core.logging import clear_metadata
-from hashlib import md5
+import sys
+from hashlib import sha256
+
 from requests import get as requests_get
-from requests.exceptions import ReadTimeout
+
+from Core.common import *
+from Core.logging import clear_metadata
+from Core.settings import (
+	Core_Server_Settings,
+	File_Smuggler_Settings,
+	Hoaxshell_Settings,
+	Loading,
+	TCP_Sock_Handler_Settings,
+	Villain,
+)
 
 # -------------- Arguments -------------- #
 parser = argparse.ArgumentParser()
@@ -33,12 +41,12 @@ args = parser.parse_args()
 
 if args.version:
 	print(f'v{Villain.version}')
-	exit(0)
+	sys.exit(0)
 
 # Parse the bind ports of servers & listeners
 Hoaxshell_Settings.certfile = args.certfile
 Hoaxshell_Settings.keyfile = args.keyfile
-Hoaxshell_Settings.ssl_support = True if (args.certfile and args.keyfile) else False
+Hoaxshell_Settings.ssl_support = bool(args.certfile and args.keyfile)
 Hoaxshell_Settings.bind_port = args.hoax_port if args.hoax_port else Hoaxshell_Settings.bind_port
 
 if Hoaxshell_Settings.ssl_support:
@@ -57,14 +65,15 @@ else:
 	defined_ports.append(Hoaxshell_Settings.bind_port)
 
 if check_list_for_duplicates(defined_ports):
-	exit(f'[{DEBUG}] The port number of each server/handler must be different.')
+	sys.exit(f'[{DEBUG}] The port number of each server/handler must be different.')
 
 # Define core server security level
-Core_Server_Settings.insecure = True if args.insecure else False
+Core_Server_Settings.insecure = bool(args.insecure)
 
 # Import Core	
-from Core.villain_core import *
+import sys
 
+from Core.villain_core import *
 
 # -------------- Functions & Classes -------------- #
 
@@ -90,7 +99,7 @@ def haxor_print(text, leading_spaces = 0):
 def print_banner():
 	
 	print('\r')
-	padding = '  '
+	_padding = '  '
 	
 	V = [[' ', '┬', ' ', ' ', '┬'], [' ', '└','┐','┌', '┘'], [' ', ' ','└','┘', ' ']]
 	I =	[[' ', '┬'], [' ', '│',], [' ', '┴']]
@@ -106,9 +115,9 @@ def print_banner():
 	txt_color = init_color
 	cl = 0
 		
-	for charset in range(0, 3):
-		for pos in range(0, len(banner)):
-			for i in range(0, len(banner[pos][charset])):
+	for charset in range(3):
+		for pos in range(len(banner)):
+			for i in range(len(banner[pos][charset])):
 				clr = f'\033[38;5;{txt_color}m'
 				char = f'{clr}{banner[pos][charset][i]}'
 				final.append(char)
@@ -158,7 +167,7 @@ def alias_sanitizer(word, _min = 2, _max = 26):
 
 	
 # Tab Auto-Completer          
-class Completer(object):
+class Completer:
 	
 	def __init__(self):
 		
@@ -264,16 +273,14 @@ class Completer(object):
 			if re.search(os.sep, search_term) and len(path_level) > 1:
 				search_term	= path_level[-1]
 				
-				for i in range(0, len(path_level)-1):
+				for i in range(len(path_level)-1):
 					root += f'{os.sep}{path_level[i]}'
 				
 			dirs = next(os.walk(root))[1]
 			match = [d + os.sep for d in dirs if re.match(f'^{re.escape(search_term)}', d)]
 			
-			if hide_py_extensions:
-
-				if '__pycache__/' in match:
-					match.remove('__pycache__/')
+			if hide_py_extensions and '__pycache__/' in match:
+				match.remove('__pycache__/')
 
 			files = next(os.walk(root))[2]
 			match += [f for f in files if re.match(f'^{re.escape(search_term)}', f)]
@@ -281,7 +288,7 @@ class Completer(object):
 			# Hide extensions
 			if hide_py_extensions:
 			
-				for i in range(0, len(match)):
+				for i in range(len(match)):
 					if match[i].count('.'):
 						match[i] = match[i].rsplit('.', 1)[0]
 					
@@ -337,7 +344,7 @@ class Completer(object):
 		# Autocomplete session IDs
 		elif ((main_cmd in ['alias', 'kill', 'shell', 'repair', 'conptyshell'] and Main_prompt.ready) or (main_cmd in self.pseudo_shell_commands and not Main_prompt.ready)) and (line_buffer_list_len > 1) and (line_buffer_list[-1][0] not in ["/", "~"]):
 			
-			if line_buffer_list[-1] in (Sessions_Manager.active_sessions.keys()):
+			if line_buffer_list[-1] in (Sessions_Manager.active_sessions):
 				pass
 			
 			else:
@@ -443,7 +450,7 @@ def main():
 				try:
 					with open(local_files_path + filename, 'rb') as f:
 						data = f.read()
-						return md5(data).hexdigest()
+						return sha256(data).hexdigest()
 						
 				except FileNotFoundError:
 					return False
@@ -456,7 +463,7 @@ def main():
 						f.write(data)
 						return True
 						
-				except:
+				except BaseException:  # noqa: BLE001
 					return False
 		
 		
@@ -468,7 +475,7 @@ def main():
 			#except requests.exceptions.HTTPError as e:
 				#print(f'\r[{ERR}] Failed to fetch latest version data: {e}') 
 
-			except Exception as e:
+			except Exception as e:  # noqa: BLE001
 				res_status_code = -1
 				Loading.stop()
 				print(f'\r[{ERR}] Failed to fetch latest version data: {e}') 
@@ -482,12 +489,12 @@ def main():
 				for filename in files:
 					try:
 						file_data = requests_get(url = raw_url + filename, timeout=(5, 29))
-					except:
+					except BaseException:  # noqa: BLE001
 						# Temporary dirty solution
 						print(f'\r[{ERR}] Failed to fetch file: {filename}. Installation may be corrupt. Consider reinstalling Villain.')
 						raise KeyboardInterrupt
 						
-					latest_signature = md5(file_data.content).hexdigest()
+					latest_signature = sha256(file_data.content).hexdigest()
 					local_signature = get_local_file_hash(filename)
 					
 					if not local_signature or (local_signature != latest_signature):
@@ -499,7 +506,7 @@ def main():
 							if consent in ['y', 'yes']:
 								update_consent = True
 								Loading.active = True
-								loading_animation = Thread(target = Loading.animate, args = (f'[{INFO}] Updating',), name = 'loading_animation', daemon = True).start()
+								_loading_animation = Thread(target = Loading.animate, args = (f'[{INFO}] Updating',), name = 'loading_animation', daemon = True).start()
 							else:
 								break
 							
@@ -509,7 +516,7 @@ def main():
 							if not updated:
 								Loading.stop()
 								print(f'\r[{ERR}] Error while updating files. Installation may be corrupt. Consider reinstalling Villain.')
-								exit(1)
+								sys.exit(1)
 								
 				if update_consent:
 					Loading.stop()
@@ -522,7 +529,6 @@ def main():
 				
 		except KeyboardInterrupt:
 			Loading.stop(print_nl = True)
-			pass
 			
 	# Initialize essential services
 	print(f'[{INFO}] Initializing required services:')
@@ -577,7 +583,7 @@ def main():
 
 
 	''' Init File Smuggler '''
-	file_smuggler = File_Smuggler()
+	_file_smuggler = File_Smuggler()
 		
 
 	def villain_out(flee = False):
@@ -593,9 +599,9 @@ def main():
 
 		try:
 			choice = input(f'\n{ATT} {chk_msg}').lower().strip() if bound else 'y'
-			verified = True if choice in ['yes', 'y'] else False
+			verified = choice in ['yes', 'y']
 
-		except:
+		except BaseException:  # noqa: BLE001
 			print()
 			verified = False
 
@@ -606,7 +612,7 @@ def main():
 				Hoaxshell.terminate() if not flee else do_nothing()
 				core.stop_listener()
 
-			except:
+			except BaseException:  # noqa: BLE001, S110
 				pass
 			
 			finally:
@@ -614,7 +620,6 @@ def main():
 				print_meta()
 				sys.exit(0)
 
-		return
 
 
 
@@ -673,7 +678,7 @@ def main():
 				cmd_list_len = len(cmd_list)
 				cmd = cmd_list[0].lower() if cmd_list else ''
 				
-				if cmd in core.requests.keys():
+				if cmd in core.requests:
 					core.requests[cmd] = True
 					continue
 
@@ -694,7 +699,7 @@ def main():
 						PrompHelp.print_main_help_msg()
 										
 					elif cmd_list_len == 2:
-						PrompHelp.print_detailed(cmd_list[1]) if cmd_list[1] in PrompHelp.commands.keys() \
+						PrompHelp.print_detailed(cmd_list[1]) if cmd_list[1] in PrompHelp.commands \
 						else print(f'Command {cmd_list[1] if len(cmd_list[1]) <= 10 else f"{cmd_list[1][0:4]}..{cmd_list[1][-4:]}" } does not exist.')
 														
 		
@@ -910,7 +915,7 @@ def main():
 						else:
 							print('Invalid session ID.')
 					else:
-						print(f'\rNo active sessions.')		
+						print('\rNo active sessions.')
 
 
 
@@ -955,7 +960,7 @@ def main():
 					if sid == alias:
 						print('Unrecognized alias.')
 					
-					elif sid in Sessions_Manager.active_sessions.keys():
+					elif sid in Sessions_Manager.active_sessions:
 						Sessions_Manager.active_sessions[sid]['aliased'] = False
 						Sessions_Manager.active_sessions[sid]['alias'] = None
 						Sessions_Manager.aliases.remove(alias)
@@ -967,7 +972,7 @@ def main():
 
 
 				elif cmd == 'clear':
-					os.system('clear')
+					print('\033[2J\033[H', end='', flush=True)
 
 
 
@@ -1075,7 +1080,7 @@ def main():
 					
 					lhost = parse_lhost(cmd_list[1])
 					try: lport = int(cmd_list[2])
-					except: lport = -1					
+					except BaseException: lport = -1					  # noqa: BLE001
 					session_id = cmd_list[3]
 					sessions_check = Sessions_Manager.sessions_check(session_id)
 					
@@ -1152,7 +1157,7 @@ def main():
 
 							try:
 								verified = input(f'\r[{WARN}] This session belongs to a sibling server. If the victim host cannot directly reach your host, this operation will fail. Proceed? [y/n]: ')
-							except:
+							except BaseException:  # noqa: BLE001
 								print()
 								verified = None
 							
@@ -1190,13 +1195,13 @@ def main():
 
 					try:
 						chk = input('This operation will delete all stored metadata (run "help purge" for more info). Proceed? [y/n]: ')
-					except:
+					except BaseException:  # noqa: BLE001
 						print()
 						continue
 
 					if chk.lower().strip() in ['yes', 'y']:
 						cm = clear_metadata()
-						print(f'Operation completed.') if cm else print('Something went wrong.')
+						print('Operation completed.') if cm else print('Something went wrong.')
 
 					else:
 						continue
@@ -1208,14 +1213,12 @@ def main():
 
 					if len(cmd_list) == 1:
 						if shell_redirectors:
-							i = 0
 							print(f'\n{BOLD}Shell Redirectors{END}\n')
 							print('ID   Session               Sibling')
 							print('---  --------------------  --------------------------------')
 														
-							for sid in shell_redirectors:
+							for i, sid in enumerate(shell_redirectors):
 								print(f'{i:3d}  {sid}  {Sessions_Manager.shell_redirectors[sid]}')
-								i += 1
 							print()
 						else:
 							print('No active redirectors.')
@@ -1228,7 +1231,7 @@ def main():
 						if operation == 'pop':
 							try:
 								redirector_id = int(cmd_list[2])
-							except:
+							except BaseException:  # noqa: BLE001
 								redirector_id = False
 								print('Redirector id must be integer.')
 							
@@ -1237,7 +1240,7 @@ def main():
 								print('No active redirectors detected.')
 							else:
 								if redirector_id <= redirectors_len and redirector_id >= 0:
-									for i in range(0, redirectors_len):
+									for i in range(redirectors_len):
 										if i == redirector_id:
 											shell_occupied = core.is_shell_session_occupied(shell_redirectors[i])
 											if shell_occupied:

