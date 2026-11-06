@@ -521,7 +521,8 @@ def main():
 				if update_consent:
 					Loading.stop()
 					print(f'\r[{INFO}] Update completed!')
-					os.execv(sys.executable, ['python3'] + sys.argv + ['-q'] + ['-s'])
+					# Restart the current interpreter with an argument list, not a shell command.
+					os.execv(sys.executable, [sys.executable] + sys.argv + ['-q'] + ['-s'])  # nosec B606
 				else:
 					Loading.stop(print_nl = True)	
 			else:

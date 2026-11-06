@@ -3243,7 +3243,7 @@ class File_Smuggler:
 	def __init__(self):
 
 		try:
-			httpd = HTTPServer(('0.0.0.0', File_Smuggler_Settings.bind_port), File_Smuggler_Http_Handler)
+			httpd = HTTPServer((File_Smuggler_Settings.bind_address, File_Smuggler_Settings.bind_port), File_Smuggler_Http_Handler)
 
 		except OSError:
 			sys.exit(f'[{DEBUG}] {self.server_name} failed to start. Port {File_Smuggler_Settings.bind_address} seems to already be in use.\n')

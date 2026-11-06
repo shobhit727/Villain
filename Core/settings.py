@@ -23,7 +23,7 @@ class Villain:
 
 class Core_Server_Settings:
 	
-	bind_address = '0.0.0.0'
+	bind_address = '127.0.0.1'
 	bind_port = 6501	
 	
 	# How long to sleep between echo requests to check if siblings are alive.
@@ -40,7 +40,7 @@ class Core_Server_Settings:
 
 class Hoaxshell_Settings:
 	
-	bind_address = '0.0.0.0'
+	bind_address = '127.0.0.1'
 	bind_port = 8080
 	bind_port_ssl = 443
 	ssl_support = None
@@ -61,7 +61,7 @@ class Hoaxshell_Settings:
 
 class File_Smuggler_Settings:
 	
-	bind_address = '0.0.0.0'
+	bind_address = '127.0.0.1'
 	bind_port = 8888	
 
 
@@ -74,7 +74,7 @@ class Sessions_manager_settings:
 
 class TCP_Sock_Handler_Settings:
 	
-	bind_address = '0.0.0.0'
+	bind_address = '127.0.0.1'
 	bind_port = 4443
 	sentinel_value = uuid4().hex
 	sock_timeout = 4

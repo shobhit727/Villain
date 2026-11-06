@@ -15,7 +15,7 @@ from copy import deepcopy
 from datetime import datetime
 from ipaddress import ip_address
 from platform import system as get_system_type
-from random import choice
+from secrets import choice
 from typing import ClassVar
 from uuid import UUID
 
