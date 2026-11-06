@@ -296,29 +296,24 @@ def subtract_lists(l1, l2):
 
 
 def print_columns(strings):
-	
-	columns, _ = os.get_terminal_size()
-	mid = (len(strings) + 1) // 2
-	max_length1 = max(len(s) for s in strings[:mid])
-	max_length2 = max(len(s) for s in strings[mid:])
+	if not strings:
+		print(f'\r[{DEBUG}] No items to display. {strings}')
+		return
 
-	if max_length1 + max_length2 + 4 <= columns:
-		# Print the strings in two evenly spaced columns
-		for i in range(mid):
-			
-			col1 = strings[i].ljust(max_length1)
-			try: col2 = strings[i+mid].ljust(max_length2)
-			except BaseException:	col2 = ''  # noqa: BLE001
-			print(col1 + " " * 4 + col2)
+	max_length = max(map(len, strings))
+	column_width = max_length + 4
+	column_count = max(1, min(len(strings), get_terminal_columns() // column_width))
+	row_count = (len(strings) + column_count - 1) // column_count
 
-	else:
-		# Print the strings in one column
-		max_length = max(len(s) for s in strings)
+	for row in range(row_count):
+		row_items = []
+		for column in range(column_count):
+			index = column * row_count + row
+			if index < len(strings):
+				row_items.append(strings[index].ljust(column_width))
+		print(''.join(row_items).rstrip())
 
-		for s in strings:
-			print(s.ljust(max_length))
-
-	print('\n', end='')
+	print("\n", end=" ")
 
 
 

@@ -531,7 +531,7 @@ class Obfuscator:
 			'Invoke-RestMethod' : 'irm'
 		}
 
-		for alt, replacement in alternatives.items():
+		for alt, replacement in alternatives.items(): #look in to this 
 
 			p = randint(0,1)
 
@@ -980,7 +980,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 									# Check if file is empty
 									execution_object = get_file_contents(file_path, 'r')
 									
-									if not execution_object: 
+									if not execution_object: #look in to this
 										raise ValueError('File is empty')
 									if not execution_object.strip('\n\r\t '):
 										print(f'\r[{WARN}] File "{file_path}" is empty.')
@@ -2763,6 +2763,7 @@ class TCP_Sock_Multi_Handler:
 						Core_Server.send_receive_one_encrypted(issuer, [output, '', session_id, False], 'command_output', 30) if output else do_nothing()
 				
 				Main_prompt.set_main_prompt_ready() if not Hoaxshell.active_shell else Hoaxshell.set_shell_prompt_ready()
+				return output #look in to this: do i need this line? it seems to be returning output but not doing anything with it. maybe i should remove it and see if it breaks anything.
 
 
 
@@ -2836,7 +2837,7 @@ class TCP_Sock_Multi_Handler:
 		if issuer == 'self' and not quiet:
 				Main_prompt.set_main_prompt_ready() if not Hoaxshell.active_shell else Hoaxshell.set_shell_prompt_ready()
 
-		return output
+		return output #look in to this: the output auabe this. whitch is used 
 
 		return self.clean_nc_response(response)
 
@@ -3243,7 +3244,7 @@ class File_Smuggler:
 	def __init__(self):
 
 		try:
-			httpd = HTTPServer((File_Smuggler_Settings.bind_address, File_Smuggler_Settings.bind_port), File_Smuggler_Http_Handler)
+			httpd = HTTPServer((File_Smuggler_Settings.bind_address, File_Smuggler_Settings.bind_port), File_Smuggler_Http_Handler) #do i even have a ile_Smuggler_Settings.bind_address in this file
 
 		except OSError:
 			sys.exit(f'[{DEBUG}] {self.server_name} failed to start. Port {File_Smuggler_Settings.bind_address} seems to already be in use.\n')

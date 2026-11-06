@@ -23,7 +23,7 @@ class Villain:
 
 class Core_Server_Settings:
 	
-	bind_address = '127.0.0.1'
+	bind_address = '127.0.0.1'#look in to this, maybe it should be'
 	bind_port = 6501	
 	
 	# How long to sleep between echo requests to check if siblings are alive.

